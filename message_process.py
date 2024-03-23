@@ -2,7 +2,7 @@ from bridge.context import *
 from bridge.reply import *
 import time
 wechat_account_map={}
-wechat_account_url_map={}
+wechat_account_callback_url_map={}
 from app import wechat_account_map
 def process_user_message( ctype: ContextType, content, **kwargs)->None:
     print(content)

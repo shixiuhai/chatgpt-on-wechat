@@ -21,8 +21,4 @@ def process_user_message( ctype: ContextType, content, **kwargs)->None:
     print(context)
     print(wechat_account_map)
     item = wechat_account_map["user_id"]
-    # channel.send(reply, context)
-    
-# # 配置一下回调函数
-# def post_user_message(call_back,reply: Reply, context: Context):
-#     call_back(reply,context)
+    item.send(reply, context)

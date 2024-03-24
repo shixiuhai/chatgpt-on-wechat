@@ -93,11 +93,21 @@ def qrCallback(uuid, status, qrcode):
         print(qr_api4)
         print(qr_api2)
         print(qr_api1)
-        _send_qr_code([qr_api1, qr_api2, qr_api3, qr_api4])
+        # _send_qr_code([qr_api1, qr_api2, qr_api3, qr_api4])
         qr = qrcode.QRCode(border=1)
         qr.add_data(url)
         qr.make(fit=True)
         qr.print_ascii(invert=True)
+        
+        # 将图像转换为二进制流
+        img = qr.make_image(fill_color="black", back_color="white")  # 设定QR码的前景色和背景色
+        bio = io.BytesIO()
+        img.save(bio, "png")
+        binary_data = bio.getvalue()
+        
+        with open("qrcode.png", "wb") as f:
+            f.write(binary_data)
+        
 
 
 @singleton
@@ -108,6 +118,49 @@ class WechatChannel(Channel):
         super().__init__()
         self.receivedMsgs = ExpiredDict(60 * 60)
         self.auto_login_times = 0
+        self.qr_img = None
+        self.user_id = None
+    
+    def qrCallback(self, uuid, status, qrcode):
+        # logger.debug("qrCallback: {} {}".format(uuid,status))
+        if status == "0":
+            try:
+                from PIL import Image
+
+                img = Image.open(io.BytesIO(qrcode))
+                _thread = threading.Thread(target=img.show, args=("QRCode",))
+                _thread.setDaemon(True)
+                _thread.start()
+            except Exception as e:
+                pass
+
+            import qrcode
+
+            url = f"https://login.weixin.qq.com/l/{uuid}"
+
+            # qr_api1 = "https://api.isoyu.com/qr/?m=1&e=L&p=20&url={}".format(url)
+            # qr_api2 = "https://api.qrserver.com/v1/create-qr-code/?size=400×400&data={}".format(url)
+            # qr_api3 = "https://api.pwmqr.com/qrcode/create/?url={}".format(url)
+            # qr_api4 = "https://my.tv.sohu.com/user/a/wvideo/getQRCode.do?text={}".format(url)
+            # print("You can also scan QRCode in any website below:")
+            # print(qr_api3)
+            # print(qr_api4)
+            # print(qr_api2)
+            # print(qr_api1)
+            # _send_qr_code([qr_api1, qr_api2, qr_api3, qr_api4])
+            qr = qrcode.QRCode(border=1)
+            qr.add_data(url)
+            qr.make(fit=True)
+            qr.print_ascii(invert=True)
+            
+            # 将图像转换为二进制流
+            img = qr.make_image(fill_color="black", back_color="white")  # 设定QR码的前景色和背景色
+            bio = io.BytesIO()
+            img.save(bio, "png")
+            binary_data = bio.getvalue()
+            # with open("qrcode.png", "wb") as f:
+            #     f.write(binary_data)
+            self.qr_img = binary_data
 
     def startup(self):
         try:
@@ -119,13 +172,16 @@ class WechatChannel(Channel):
                 enableCmdQR=2,
                 hotReload=hotReload,
                 statusStorageDir=status_path,
-                qrCallback=qrCallback,
+                qrCallback=self.qrCallback,
                 exitCallback=self.exitCallback,
                 loginCallback=self.loginCallback
             )
             self.user_id = itchat.instance.storageClass.userName
             self.name = itchat.instance.storageClass.nickName
-            logger.info("Wechat login success, user_id: {}, nickname: {}".format(self.user_id, self.name))
+            logger.info("Wechat login success, user_id: {}, nickname: {}".format(self.user_id, self.name))    
+            print("+++++++++++++++++++")
+            print(self.user_id)
+            print("+++++++++++++++++++")
             # start message listener
             itchat.run()
         except Exception as e:
@@ -133,20 +189,24 @@ class WechatChannel(Channel):
 
     def exitCallback(self):
         try:
-            from common.linkai_client import chat_client
-            if chat_client.client_id and conf().get("use_linkai"):
-                _send_logout()
-                time.sleep(2)
-                self.auto_login_times += 1
-                if self.auto_login_times < 100:
-                    chat_channel.handler_pool._shutdown = False
-                    self.startup()
+            pass
+            # from common.linkai_client import chat_client
+            # if chat_client.client_id and conf().get("use_linkai"):
+            #     _send_logout()
+            #     time.sleep(2)
+            #     self.auto_login_times += 1
+            #     if self.auto_login_times < 100:
+            #         chat_channel.handler_pool._shutdown = False
+            #         self.startup()
         except Exception as e:
             pass
 
     def loginCallback(self):
-        logger.debug("Login success")
-        _send_login_success()
+        print("==========================")
+        # print(self.user_id)
+        print("==========================")
+        
+        # _send_login_success()
 
     # handle_* 系列函数处理收到的消息后构造Context，然后传入produce函数中处理Context和发送回复
     # Context包含了消息的所有信息，包括以下属性
@@ -260,26 +320,26 @@ class WechatChannel(Channel):
             itchat.send_video(video_storage, toUserName=receiver)
             logger.info("[WX] sendVideo url={}, receiver={}".format(video_url, receiver))
 
-def _send_login_success():
-    try:
-        from common.linkai_client import chat_client
-        if chat_client.client_id:
-            chat_client.send_login_success()
-    except Exception as e:
-        pass
+# def _send_login_success():
+#     try:
+#         from common.linkai_client import chat_client
+#         if chat_client.client_id:
+#             chat_client.send_login_success()
+#     except Exception as e:
+#         pass
 
-def _send_logout():
-    try:
-        from common.linkai_client import chat_client
-        if chat_client.client_id:
-            chat_client.send_logout()
-    except Exception as e:
-        pass
+# def _send_logout():
+#     try:
+#         from common.linkai_client import chat_client
+#         if chat_client.client_id:
+#             chat_client.send_logout()
+#     except Exception as e:
+#         pass
 
-def _send_qr_code(qrcode_list: list):
-    try:
-        from common.linkai_client import chat_client
-        if chat_client.client_id:
-            chat_client.send_qrcode(qrcode_list)
-    except Exception as e:
-        pass
+# def _send_qr_code(qrcode_list: list):
+#     try:
+#         from common.linkai_client import chat_client
+#         if chat_client.client_id:
+#             chat_client.send_qrcode(qrcode_list)
+#     except Exception as e:
+#         pass

@@ -10,7 +10,8 @@ from channel import channel_factory
 from common.log import logger
 from config import conf
 import time
-from message_process import wechat_account_map
+from threading import Thread
+channel_name="wx"
 # wechat_account_qr_img_map = {}
 class ResponseCustom():
     """_summary_
@@ -45,15 +46,16 @@ def sigterm_handler_wrap(_signo):
 
     signal.signal(_signo, func)
 
-def start_channel(channel_name: str):
-    channel = channel_factory.create_channel(channel_name)
-    channel.startup()
-    print("+++++++++++++++++")
-    print(channel.qr_img)
-    print("+++++++++++++++++++")
+# def start_channel(channel_name: str):
+#     channel = channel_factory.create_channel(channel_name)
+#     print("------------------------")
+#     channel.startup()
+#     print("+++++++++++++++++")
+#     print(channel.qr_img)
+#     print("+++++++++++++++++++")
     
-    while True:
-        time.sleep(1)
+    # while True:
+    #     time.sleep(1)
     # while channel.user_id is None:
     #     time.sleep(1)
     #     print("循环中")
@@ -68,6 +70,10 @@ def start_channel(channel_name: str):
     # print("==========添加到map里成功=========")
     # print(wechat_account_map)
     # print("==========添加到map里成功=========")
+def get_channel(channel_name, custom_user_id:str):
+    channel = channel_factory.create_channel(channel_name, custom_user_id)
+    return channel
+    
     
 
 # def run():
@@ -87,10 +93,20 @@ def start_channel(channel_name: str):
         
 # 创建Flask应用实例
 app = Flask(__name__)
-@app.route('/api/wechat/login', methods=['POST'])
-def wechat_login():
-    channel_name="wx"
-    thread_pool.submit(start_channel,channel_name)
+@app.route('/api/wechat/create/qr', methods=['POST'])
+def create_qr():
+    """_summary_
+    创建二维码
+    Returns:
+        _type_: _description_
+    """
+    data = request.get_json(silent=True)
+    custom_user_id = data.get("custom_user_id",None)
+    
+    # thread_pool.submit(start_channel,channel_name)
+    channel = get_channel(channel_name,custom_user_id)
+    # thread_pool.submit(channel.startup)
+    Thread(target=channel.startup).start()
     return "sucessful"
     # while "qr" not in wechat_account_qr_img_map:
     #     print(wechat_account_qr_img_map)
@@ -104,8 +120,20 @@ def wechat_login():
     # while channel.qr_img is not None:
     #     time.sleep(1)
     # return Response(channel.qr_img, mimetype="image/png")
+
+@app.route('/api/wechat/get/qr', methods=['POST'])   
+def get_qr():
+    """_summary_
+    获取二维码
+    Returns:
+        _type_: _description_
+    """
     
     
+     
+    
+
+
 
 @app.route('/api/post', methods=['POST'])
 def post_api():

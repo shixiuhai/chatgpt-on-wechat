@@ -5,7 +5,7 @@ from common import const
 from .channel import Channel
 
 
-def create_channel(channel_type) -> Channel:
+def create_channel(channel_type,custom_user_id) -> Channel:
     """
     create a channel instance
     :param channel_type: channel type code
@@ -14,7 +14,7 @@ def create_channel(channel_type) -> Channel:
     ch = Channel()
     if channel_type == "wx":
         from channel.wechat.wechat_channel import WechatChannel
-        ch = WechatChannel()
+        ch = WechatChannel(custom_user_id)
     elif channel_type == "wxy":
         from channel.wechat.wechaty_channel import WechatyChannel
         ch = WechatyChannel()

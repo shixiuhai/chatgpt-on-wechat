@@ -1,8 +1,11 @@
 from bridge.context import *
 from bridge.reply import *
 import time
-wechat_account_map={}
+wechat_account_wx_user_id_map={} # 微信用户ID存储
+wechat_account_qr_map={} # 二维码
+wechat_account_channel_map={} # 微信实体类
 wechat_account_callback_url_map={}
+
 def process_user_message( ctype: ContextType, content, **kwargs)->None:
     print(content)
     print(kwargs)
@@ -18,6 +21,6 @@ def process_user_message( ctype: ContextType, content, **kwargs)->None:
     context = Context()
     context.kwargs={"receiver":kwargs["msg"].from_user_id}
     print(context)
-    print(wechat_account_map)
-    item = wechat_account_map['@83b067d420dad8e6b2655a350f09f06e535c3ede60cb2a7e8f30716aa2d7daf7']
+    print(wechat_account_channel_map)
+    item = wechat_account_channel_map[123]
     item.send(reply, context)

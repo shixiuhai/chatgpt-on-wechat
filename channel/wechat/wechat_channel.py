@@ -22,6 +22,7 @@ from config import conf, get_appdata_dir
 from lib import itchat
 from lib.itchat.content import *
 from message_process import process_user_message
+from message_process import wechat_account_wx_user_id_map, wechat_account_qr_map, wechat_account_channel_map
 
 @itchat.msg_register([TEXT, VOICE, PICTURE, NOTE, ATTACHMENT, SHARING])
 def handler_single_msg(msg):
@@ -67,46 +68,46 @@ def _check(func):
 # 可用的二维码生成接口
 # https://api.qrserver.com/v1/create-qr-code/?size=400×400&data=https://www.abc.com
 # https://api.isoyu.com/qr/?m=1&e=L&p=20&url=https://www.abc.com
-def qrCallback(uuid, status, qrcode):
-    # logger.debug("qrCallback: {} {}".format(uuid,status))
-    if status == "0":
-        try:
-            from PIL import Image
+# def qrCallback(uuid, status, qrcode):
+#     # logger.debug("qrCallback: {} {}".format(uuid,status))
+#     if status == "0":
+#         try:
+#             from PIL import Image
 
-            img = Image.open(io.BytesIO(qrcode))
-            _thread = threading.Thread(target=img.show, args=("QRCode",))
-            _thread.setDaemon(True)
-            _thread.start()
-        except Exception as e:
-            pass
+#             img = Image.open(io.BytesIO(qrcode))
+#             _thread = threading.Thread(target=img.show, args=("QRCode",))
+#             _thread.setDaemon(True)
+#             _thread.start()
+#         except Exception as e:
+#             pass
 
-        import qrcode
+#         import qrcode
 
-        url = f"https://login.weixin.qq.com/l/{uuid}"
+#         url = f"https://login.weixin.qq.com/l/{uuid}"
 
-        qr_api1 = "https://api.isoyu.com/qr/?m=1&e=L&p=20&url={}".format(url)
-        qr_api2 = "https://api.qrserver.com/v1/create-qr-code/?size=400×400&data={}".format(url)
-        qr_api3 = "https://api.pwmqr.com/qrcode/create/?url={}".format(url)
-        qr_api4 = "https://my.tv.sohu.com/user/a/wvideo/getQRCode.do?text={}".format(url)
-        print("You can also scan QRCode in any website below:")
-        print(qr_api3)
-        print(qr_api4)
-        print(qr_api2)
-        print(qr_api1)
-        # _send_qr_code([qr_api1, qr_api2, qr_api3, qr_api4])
-        qr = qrcode.QRCode(border=1)
-        qr.add_data(url)
-        qr.make(fit=True)
-        qr.print_ascii(invert=True)
+#         qr_api1 = "https://api.isoyu.com/qr/?m=1&e=L&p=20&url={}".format(url)
+#         qr_api2 = "https://api.qrserver.com/v1/create-qr-code/?size=400×400&data={}".format(url)
+#         qr_api3 = "https://api.pwmqr.com/qrcode/create/?url={}".format(url)
+#         qr_api4 = "https://my.tv.sohu.com/user/a/wvideo/getQRCode.do?text={}".format(url)
+#         print("You can also scan QRCode in any website below:")
+#         print(qr_api3)
+#         print(qr_api4)
+#         print(qr_api2)
+#         print(qr_api1)
+#         # _send_qr_code([qr_api1, qr_api2, qr_api3, qr_api4])
+#         qr = qrcode.QRCode(border=1)
+#         qr.add_data(url)
+#         qr.make(fit=True)
+#         qr.print_ascii(invert=True)
         
-        # 将图像转换为二进制流
-        img = qr.make_image(fill_color="black", back_color="white")  # 设定QR码的前景色和背景色
-        bio = io.BytesIO()
-        img.save(bio, "png")
-        binary_data = bio.getvalue()
+#         # 将图像转换为二进制流
+#         img = qr.make_image(fill_color="black", back_color="white")  # 设定QR码的前景色和背景色
+#         bio = io.BytesIO()
+#         img.save(bio, "png")
+#         binary_data = bio.getvalue()
         
-        with open("qrcode.png", "wb") as f:
-            f.write(binary_data)
+#         with open("qrcode.png", "wb") as f:
+#             f.write(binary_data)
         
 
 
@@ -114,12 +115,12 @@ def qrCallback(uuid, status, qrcode):
 class WechatChannel(Channel):
     NOT_SUPPORT_REPLYTYPE = []
 
-    def __init__(self):
+    def __init__(self,custom_user_id=None):
         super().__init__()
         self.receivedMsgs = ExpiredDict(60 * 60)
         self.auto_login_times = 0
         self.qr_img = None
-        self.user_id = None
+        self.custom_user_id = custom_user_id
     
     def qrCallback(self, uuid, status, qrcode):
         # logger.debug("qrCallback: {} {}".format(uuid,status))
@@ -161,6 +162,7 @@ class WechatChannel(Channel):
             # with open("qrcode.png", "wb") as f:
             #     f.write(binary_data)
             self.qr_img = binary_data
+            wechat_account_qr_map[self.custom_user_id]=self.qr_img # 配置二维码
 
     def startup(self):
         try:
@@ -179,6 +181,10 @@ class WechatChannel(Channel):
             self.user_id = itchat.instance.storageClass.userName
             self.name = itchat.instance.storageClass.nickName
             logger.info("Wechat login success, user_id: {}, nickname: {}".format(self.user_id, self.name))    
+            # 设置微信用户ID
+            if self.user_id is not None:
+                wechat_account_wx_user_id_map[self.custom_user_id]=self.user_id
+                wechat_account_channel_map[self.custom_user_id]=self
             print("+++++++++++++++++++")
             print(self.user_id)
             print("+++++++++++++++++++")

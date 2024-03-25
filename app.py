@@ -11,8 +11,15 @@ from common.log import logger
 from config import conf
 import time
 from threading import Thread
+import requests
+from message_process import wechat_account_channel_map,wechat_account_qr_map,wechat_account_callback_url_map,wechat_account_wx_user_id_map
 channel_name="wx"
 # wechat_account_qr_img_map = {}
+def validate_custom_user_id(custom_user_id):
+    if custom_user_id is None or custom_user_id == "" or isinstance(custom_user_id,int):
+        return ResponseCustom(code=500,message="自定义用户为空或者未设置")
+    
+
 class ResponseCustom():
     """_summary_
     封装一个返回成功的类
@@ -102,12 +109,12 @@ def create_qr():
     """
     data = request.get_json(silent=True)
     custom_user_id = data.get("custom_user_id",None)
-    
+    validate_custom_user_id(custom_user_id)
     # thread_pool.submit(start_channel,channel_name)
     channel = get_channel(channel_name,custom_user_id)
     # thread_pool.submit(channel.startup)
     Thread(target=channel.startup).start()
-    return "sucessful"
+    return ResponseCustom(message="创建微信登录二维码成").to_json()
     # while "qr" not in wechat_account_qr_img_map:
     #     print(wechat_account_qr_img_map)
         
@@ -128,13 +135,16 @@ def get_qr():
     Returns:
         _type_: _description_
     """
+    data = request.get_json(silent=True)
+    custom_user_id = data.get("custom_user_id",None)
+    validate_custom_user_id(custom_user_id)
+    # res=requests.post("http://127.0.0.1:5000/api/wechat/create/qr",json={
+    #     "custom_user_id":custom_user_id
+    # })
+    # if res.json()["code"]==200:
+    qr_img = wechat_account_qr_map[custom_user_id]
+    return Response(qr_img, mimetype="image/png")
     
-    
-     
-    
-
-
-
 @app.route('/api/post', methods=['POST'])
 def post_api():
     # 获取 POST 请求参数
@@ -164,4 +174,4 @@ def get_api():
 
 if __name__ == "__main__":
     # run()
-    app.run()
+    app.run(threaded=True)

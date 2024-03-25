@@ -22,5 +22,5 @@ def process_user_message( ctype: ContextType, content, **kwargs)->None:
     context.kwargs={"receiver":kwargs["msg"].from_user_id}
     print(context)
     print(wechat_account_channel_map)
-    item = wechat_account_channel_map[123]
+    item = wechat_account_channel_map["123"]
     item.send(reply, context)

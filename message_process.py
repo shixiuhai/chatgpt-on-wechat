@@ -4,7 +4,7 @@ import time
 wechat_account_wx_user_id_map={} # 微信用户ID存储
 wechat_account_qr_map={} # 二维码
 wechat_account_channel_map={} # 微信实体类
-wechat_account_callback_url_map={}
+wechat_account_callback_url_map={} # 配置用户的回调接口
 
 def process_user_message( ctype: ContextType, content, **kwargs)->None:
     print(content)

@@ -82,6 +82,30 @@ def get_channel(channel_name, custom_user_id:str):
     return channel
     
     
+def parse_wx_friends(data:list)->list:
+    """_summary_
+    解析微信返回的朋友列表
+    Args:
+        data (list): _description_
+
+    Returns:
+        list: _description_
+    """
+    return_list = []
+    if len(data)>0:
+        for item in data:
+            return_list.append(
+                {
+                    "city":item["City"],
+                    "headImgUrl":item["HeadImgUrl"],
+                    "nickName":item["NickName"],
+                    "province":item["Province"],
+                    "signature":item["Signature"],
+                    "wxUserId":item["UserName"]
+                })
+        return return_list
+    else:
+        return []
 
 # def run():
 #     try:
@@ -108,7 +132,7 @@ def create_qr():
         _type_: _description_
     """
     data = request.get_json(silent=True)
-    custom_user_id = data.get("custom_user_id",None)
+    custom_user_id = data.get("customUserId",None)
     validate_custom_user_id(custom_user_id)
     # thread_pool.submit(start_channel,channel_name)
     channel = get_channel(channel_name,custom_user_id)
@@ -136,7 +160,7 @@ def get_qr():
         _type_: _description_
     """
     data = request.get_json(silent=True)
-    custom_user_id = data.get("custom_user_id",None)
+    custom_user_id = data.get("customUserId",None)
     validate_custom_user_id(custom_user_id)
     # res=requests.post("http://127.0.0.1:5000/api/wechat/create/qr",json={
     #     "custom_user_id":custom_user_id
@@ -144,7 +168,38 @@ def get_qr():
     # if res.json()["code"]==200:
     qr_img = wechat_account_qr_map[custom_user_id]
     return Response(qr_img, mimetype="image/png")
+
+
+@app.route('/api/wechat/get/customUserWxUserId', methods=['POST'])
+def get_custom_user_wx_user_id():
+    """_summary_
+    获取自定义用户对应的微信用户ID
+    Returns:
+        _type_: _description_
+    """
+    data = request.get_json(silent=True)
+    custom_user_id = data.get("customUserId",None)
+    validate_custom_user_id(custom_user_id)
+    wx_user_id = wechat_account_wx_user_id_map[custom_user_id]
+    data={
+        "customUserId": custom_user_id,
+        "wxUserId": wx_user_id
+    }
+    return ResponseCustom(message="获取自定义用户ID对应的微信用户ID成功",data=data).to_json()
     
+@app.route('/api/wechat/get/customUserWxFriends', methods=['POST'])
+def get_custom_user_wx_friends():
+    data = request.get_json(silent=True)
+    custom_user_id = data.get("customUserId",None)
+    validate_custom_user_id(custom_user_id)
+    wx_friends = wechat_account_channel_map[custom_user_id].get_friends()
+    data={
+        "customUserId": custom_user_id,
+        "wxFriends": parse_wx_friends(wx_friends)
+    }
+    return ResponseCustom(message="获取自定义用户ID对于的微信好友成功",data=data).to_json()
+    
+
 @app.route('/api/post', methods=['POST'])
 def post_api():
     # 获取 POST 请求参数

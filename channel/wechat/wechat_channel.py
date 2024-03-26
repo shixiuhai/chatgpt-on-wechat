@@ -185,9 +185,9 @@ class WechatChannel(Channel):
             if self.user_id is not None:
                 wechat_account_wx_user_id_map[self.custom_user_id]=self.user_id
                 wechat_account_channel_map[self.custom_user_id]=self
-            print("+++++++++++++++++++")
-            print(self.user_id)
-            print("+++++++++++++++++++")
+            # print("+++++++++++++++++++")
+            # print(self.user_id)
+            # print("+++++++++++++++++++")
             # start message listener
             itchat.run()
         except Exception as e:
@@ -207,10 +207,23 @@ class WechatChannel(Channel):
         except Exception as e:
             pass
 
+    def get_friends(self):
+        """_summary_
+            获取好友列表
+        """
+        return itchat.get_friends()
+    
+    def get_chatrooms(self):
+        """
+            获取所有群组信息
+        """ 
+        return itchat.get_chatrooms()
+    
     def loginCallback(self):
-        print("==========================")
+        pass
+        # print("==========================")
         # print(self.user_id)
-        print("==========================")
+        # print("==========================")
         
         # _send_login_success()
 

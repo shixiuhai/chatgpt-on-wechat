@@ -243,7 +243,7 @@ def delete_wx_user():
     custom_user_id = data.get("customUserId",None)
     validate_custom_user_id(custom_user_id)
     channel = wechat_account_channel_map[custom_user_id]
-    channel.logout()
+    channel.login_out()
     del channel
     return ResponseCustom(message="删除自定义用户登录的微信成功").to_json()
 

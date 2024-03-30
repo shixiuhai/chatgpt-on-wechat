@@ -65,52 +65,6 @@ def _check(func):
     return wrapper
 
 
-# 可用的二维码生成接口
-# https://api.qrserver.com/v1/create-qr-code/?size=400×400&data=https://www.abc.com
-# https://api.isoyu.com/qr/?m=1&e=L&p=20&url=https://www.abc.com
-# def qrCallback(uuid, status, qrcode):
-#     # logger.debug("qrCallback: {} {}".format(uuid,status))
-#     if status == "0":
-#         try:
-#             from PIL import Image
-
-#             img = Image.open(io.BytesIO(qrcode))
-#             _thread = threading.Thread(target=img.show, args=("QRCode",))
-#             _thread.setDaemon(True)
-#             _thread.start()
-#         except Exception as e:
-#             pass
-
-#         import qrcode
-
-#         url = f"https://login.weixin.qq.com/l/{uuid}"
-
-#         qr_api1 = "https://api.isoyu.com/qr/?m=1&e=L&p=20&url={}".format(url)
-#         qr_api2 = "https://api.qrserver.com/v1/create-qr-code/?size=400×400&data={}".format(url)
-#         qr_api3 = "https://api.pwmqr.com/qrcode/create/?url={}".format(url)
-#         qr_api4 = "https://my.tv.sohu.com/user/a/wvideo/getQRCode.do?text={}".format(url)
-#         print("You can also scan QRCode in any website below:")
-#         print(qr_api3)
-#         print(qr_api4)
-#         print(qr_api2)
-#         print(qr_api1)
-#         # _send_qr_code([qr_api1, qr_api2, qr_api3, qr_api4])
-#         qr = qrcode.QRCode(border=1)
-#         qr.add_data(url)
-#         qr.make(fit=True)
-#         qr.print_ascii(invert=True)
-        
-#         # 将图像转换为二进制流
-#         img = qr.make_image(fill_color="black", back_color="white")  # 设定QR码的前景色和背景色
-#         bio = io.BytesIO()
-#         img.save(bio, "png")
-#         binary_data = bio.getvalue()
-        
-#         with open("qrcode.png", "wb") as f:
-#             f.write(binary_data)
-        
-
-
 @singleton
 class WechatChannel(Channel):
     NOT_SUPPORT_REPLYTYPE = []
@@ -185,10 +139,6 @@ class WechatChannel(Channel):
             if self.user_id is not None:
                 wechat_account_wx_user_id_map[self.custom_user_id]=self.user_id
                 wechat_account_channel_map[self.custom_user_id]=self
-            # print("+++++++++++++++++++")
-            # print(self.user_id)
-            # print("+++++++++++++++++++")
-            # start message listener
             itchat.run()
         except Exception as e:
             logger.error(e)
@@ -339,26 +289,5 @@ class WechatChannel(Channel):
             itchat.send_video(video_storage, toUserName=receiver)
             logger.info("[WX] sendVideo url={}, receiver={}".format(video_url, receiver))
 
-# def _send_login_success():
-#     try:
-#         from common.linkai_client import chat_client
-#         if chat_client.client_id:
-#             chat_client.send_login_success()
-#     except Exception as e:
-#         pass
-
-# def _send_logout():
-#     try:
-#         from common.linkai_client import chat_client
-#         if chat_client.client_id:
-#             chat_client.send_logout()
-#     except Exception as e:
-#         pass
-
-# def _send_qr_code(qrcode_list: list):
-#     try:
-#         from common.linkai_client import chat_client
-#         if chat_client.client_id:
-#             chat_client.send_qrcode(qrcode_list)
-#     except Exception as e:
-#         pass
+    def login_out(self):
+        itchat.logout()

@@ -14,12 +14,13 @@ from threading import Thread
 import requests
 from message_process import wechat_account_channel_map,wechat_account_qr_map,wechat_account_callback_url_map,wechat_account_wx_user_id_map
 channel_name="wx"
+from bridge.context import *
+from bridge.reply import *
 # wechat_account_qr_img_map = {}
 def validate_custom_user_id(custom_user_id):
     if custom_user_id is None or custom_user_id == "" or isinstance(custom_user_id,int):
         return ResponseCustom(code=500,message="自定义用户为空或者未设置")
     
-
 class ResponseCustom():
     """_summary_
     封装一个返回成功的类
@@ -53,34 +54,9 @@ def sigterm_handler_wrap(_signo):
 
     signal.signal(_signo, func)
 
-# def start_channel(channel_name: str):
-#     channel = channel_factory.create_channel(channel_name)
-#     print("------------------------")
-#     channel.startup()
-#     print("+++++++++++++++++")
-#     print(channel.qr_img)
-#     print("+++++++++++++++++++")
-    
-    # while True:
-    #     time.sleep(1)
-    # while channel.user_id is None:
-    #     time.sleep(1)
-    #     print("循环中")
-    #     # channel.startup()
-    #     if channel.qr_img is not None:
-    #         wechat_account_qr_img_map["qr"] = channel.qr_img
-    #     if channel.user_id is not None:
-    #         wechat_account_map[channel.user_id] = channel
-        
-            
-            
-    # print("==========添加到map里成功=========")
-    # print(wechat_account_map)
-    # print("==========添加到map里成功=========")
 def get_channel(channel_name, custom_user_id:str):
     channel = channel_factory.create_channel(channel_name, custom_user_id)
     return channel
-    
     
 def parse_wx_friends(data:list)->list:
     """_summary_
@@ -107,20 +83,27 @@ def parse_wx_friends(data:list)->list:
     else:
         return []
 
-# def run():
-#     try:
-#         # ctrl + c
-#         sigterm_handler_wrap(signal.SIGINT)
-#         # kill signal
-#         sigterm_handler_wrap(signal.SIGTERM)
-#         channel_name = "wx"
-#         start_channel(channel_name)
-#         while True:
-#             time.sleep(1)
-#     except Exception as e:
-#         logger.error("App startup failed!")
-#         logger.exception(e)
-        
+def parse_wx_groups(data:list)->list:
+    """_summary_
+    解析微信群组返回消息
+    Args:
+        data (list): _description_
+
+    Returns:
+        list: _description_
+    """
+    return_list = []
+    if len(data)>0:
+        for item in data:
+            return_list.append(
+                {
+                    "city":item["City"],
+                    "headImgUrl":item["HeadImgUrl"],
+                    "nickName":item["NickName"],
+                    "groupId":item["UserName"],
+                    "selfWxUserId":item["Self"]["UserName"]
+                })
+    return return_list       
         
 # 创建Flask应用实例
 app = Flask(__name__)
@@ -134,24 +117,11 @@ def create_qr():
     data = request.get_json(silent=True)
     custom_user_id = data.get("customUserId",None)
     validate_custom_user_id(custom_user_id)
-    # thread_pool.submit(start_channel,channel_name)
     channel = get_channel(channel_name,custom_user_id)
     # thread_pool.submit(channel.startup)
     Thread(target=channel.startup).start()
     return ResponseCustom(message="创建微信登录二维码成").to_json()
-    # while "qr" not in wechat_account_qr_img_map:
-    #     print(wechat_account_qr_img_map)
-        
-    #     time.sleep(1)
-    # return Response(wechat_account_qr_img_map["qr"], mimetype="image/png")
-    # qr_img = start_channel(channel_name)
-    # qr_byte = wechat_account_login_qr_map["qr"]
-    # channel = channel_factory.create_channel(channel_name)
-    # thread_pool.submit(channel.startup)
-    # while channel.qr_img is not None:
-    #     time.sleep(1)
-    # return Response(channel.qr_img, mimetype="image/png")
-
+    
 @app.route('/api/wechat/get/qr', methods=['POST'])   
 def get_qr():
     """_summary_
@@ -168,7 +138,6 @@ def get_qr():
     # if res.json()["code"]==200:
     qr_img = wechat_account_qr_map[custom_user_id]
     return Response(qr_img, mimetype="image/png")
-
 
 @app.route('/api/wechat/get/customUserWxUserId', methods=['POST'])
 def get_custom_user_wx_user_id():
@@ -189,6 +158,11 @@ def get_custom_user_wx_user_id():
     
 @app.route('/api/wechat/get/customUserWxFriends', methods=['POST'])
 def get_custom_user_wx_friends():
+    """_summary_
+    获取自定义用户对应的微信所有朋友
+    Returns:
+        _type_: _description_
+    """
     data = request.get_json(silent=True)
     custom_user_id = data.get("customUserId",None)
     validate_custom_user_id(custom_user_id)
@@ -197,34 +171,81 @@ def get_custom_user_wx_friends():
         "customUserId": custom_user_id,
         "wxFriends": parse_wx_friends(wx_friends)
     }
-    return ResponseCustom(message="获取自定义用户ID对于的微信好友成功",data=data).to_json()
+    return ResponseCustom(message="获取自定义用户ID对应的微信好友成功",data=data).to_json()
     
-
-@app.route('/api/post', methods=['POST'])
-def post_api():
-    # 获取 POST 请求参数
+@app.route('/api/wechat/get/customUserWxGroups', methods=['POST'])
+def get_custom_user_wx_groups():
+    """_summary_
+    获取自定义用户对应的微信所有朋友
+    Returns:
+        _type_: _description_
+    """
     data = request.get_json(silent=True)
-    name = data['name']
-    age = data['age']
+    custom_user_id = data.get("customUserId",None)
+    validate_custom_user_id(custom_user_id)
+    wx_groups = wechat_account_channel_map[custom_user_id].get_chatrooms()
+    data={
+        "customUserId": custom_user_id,
+        "wxGroups": parse_wx_groups(wx_groups)
+    }
+    return ResponseCustom(message="获取自定义用户ID对应的微信群组成功",data=data).to_json()
 
-    # 处理数据
-    # ...
+@app.route('/api/wechat/post/message/wxUser', methods=['POST'])
+def post_message_to_wx_user():
+    """_summary_
+    发送消息给微信用户
+    """
+    data = request.get_json(silent=True)
+    custom_user_id = data.get("customUserId",None)
+    validate_custom_user_id(custom_user_id)
+    text = data.get("text",None)
+    # wx_user_id = data.get("wxUserId",None)
+    wx_receiver_user_id = data.get("wxReceiverUserId")
+    message_type = data.get("messageType",None)
+    
+    wx_channel = wechat_account_channel_map[custom_user_id]
+    if message_type == ReplyType.TEXT.value:
+        reply = Reply(ReplyType.TEXT,text)
+        context = Context()
+        context.kwargs={"receiver":wx_receiver_user_id}
+    wx_channel.send(reply, context)
+    return ResponseCustom(message="发送消息给用户成功").to_json()
+    
+@app.route('/api/wechat/post/message/wxGroup', methods=['POST'])
+def post_message_to_wx_group():
+    """_summary_
+    发送消息给微信群组
+    """
+    data = request.get_json(silent=True)
+    custom_user_id = data.get("customUserId",None)
+    validate_custom_user_id(custom_user_id)
+    
+    text = data.get("text",None)
+    # wx_user_id = data.get("wxUserId",None)
+    wx_receiver_group_id = data.get("wxReceiverGroupId")
+    message_type = data.get("messageType",None)
+    wx_channel = wechat_account_channel_map[custom_user_id]
+    if message_type == ReplyType.TEXT.value:
+        reply = Reply(ReplyType.TEXT,text)
+        context = Context()
+        context.kwargs={"receiver":wx_receiver_group_id}
+    wx_channel.send(reply, context)
+    return ResponseCustom(message="发送消息给群组成功").to_json()
 
-    # 返回响应
-    return {"success": True, "message": "success"}
-
-@app.route('/api/get', methods=['GET'])
-def get_api():
-    # 获取 GET 请求参数
-    name = request.args.get('name')
-    age = request.args.get('age')
-
-    # 处理数据
-    # ...
-
-    # 返回响应
-    return {"success": True, "message": "success"}
-
+@app.route('/api/wechat/delete/quit', methods=['POST'])
+def delete_wx_user():
+    """_summary_
+    删除自定义用户登录的微信
+    Returns:
+        _type_: _description_
+    """
+    data = request.get_json(silent=True)
+    custom_user_id = data.get("customUserId",None)
+    validate_custom_user_id(custom_user_id)
+    channel = wechat_account_channel_map[custom_user_id]
+    channel.logout()
+    del channel
+    return ResponseCustom(message="删除自定义用户登录的微信成功").to_json()
 
 
 if __name__ == "__main__":
